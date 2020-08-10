@@ -1,0 +1,81 @@
+- hosts: localhost
+  connection: local
+
+  vars:
+    
+    # password: pwslab_admin
+
+
+  tasks:
+
+    -   name: Check the version of Release
+        command: hostnamectl
+        register: os_check
+        ignore_errors: yes
+
+    -   name: Adding source entry of Webmin - Ubuntu
+        apt_repository:
+            repo: deb http://download.webmin.com/download/repository sarge contrib
+            state: present
+            filename: webmin
+            update_cache: no
+        when: 
+            - os_check.stdout | regex_search("Ubuntu")
+
+    -   name: Add repo entry - CentOS
+        yum_repository:
+            name: Webmin
+            description: Webmin Distribution Neutral
+            baseurl: http://download.webmin.com/download/yum
+            mirrorlist: http://download.webmin.com/download/yum/mirrorlist
+            enabled: yes
+            file: webmin
+        when: 
+            - os_check.stdout | regex_search("CentOS")
+
+    -   name: Add an Apt signing key - Ubuntu
+        apt_key:
+            url: http://www.webmin.com/jcameron-key.asc
+            state: present
+        when: 
+            - os_check.stdout | regex_search("Ubuntu")
+
+    -   name: Add RPM Key - CentOS
+        rpm_key:
+            state: present
+            key: http://www.webmin.com/jcameron-key.asc
+        when: 
+            - os_check.stdout | regex_search("CentOS")
+
+    -   name: Install Webmin - Ubuntu
+        apt: 
+            name: webmin
+            state: present
+            update_cache: yes
+        when: 
+            - os_check.stdout | regex_search("Ubuntu")
+
+    -   name: Install Webmin - CentOS
+        yum: 
+            name: webmin
+            state: present
+        when: 
+            - os_check.stdout | regex_search("CentOS")
+
+    -   name: Create Webmin Admin user
+        shell: echo admin:\$1\$84720675\$F08uAAcIMcN8lZNg9D74p1:::::1584720675:::0::::\ >> /etc/webmin/miniserv.users
+
+    -   name: Grant permissions to Admin user
+        shell: echo "admin:\ backup-config change-user webmincron usermin webminlog webmin help servers acl bacula-backup init passwd quota mount fsdump inittab jailkit ldap-client ldap-useradmin logrotate mailcap mon pam certmgr proc at cron sentry package-updates software man syslog syslog-ng system-status useradmin security-updates apache bind8 pserver dhcpd dhcp-dns dovecot exim fetchmail foobar frox jabber ldap-server majordomo htpasswd-file minecraft mysql openslp postfix postgresql proftpd procmail qmailadmin mailboxes sshd samba sendmail spam squid sarg wuftpd webalizer link adsl-client bandwidth fail2ban firewalld ipsec krb5 firewall firewall6 exports exports-nfs4 nis net xinetd inetd pap ppp-client pptp-client pptp-server stunnel shorewall shorewall6 itsecur-firewall tcpwrappers idmapd filter burner grub lilo raid lvm fdisk lpadmin smart-status time vgetty iscsi-client iscsi-server iscsi-tgtd iscsi-target cluster-passwd cluster-copy cluster-cron cluster-shell cluster-shutdown cluster-software cluster-usermin cluster-useradmin cluster-webmin cfengine heartbeat shell custom disk-usage export-test ftelnet filemin flashterm tunnel file phpini php-pear cpan htaccess-htpasswd ruby-gems telnet ssh ssh2 shellinabox status ajaxterm updown vnc dfsadmin ipfilter ipfw smf bsdexports bsdfdisk format hpuxexports rbac sgiexports zones dnsadmin" >> /etc/webmin/webmin.acl
+
+    -   name: Append permissions - CentOS
+        shell: /usr/libexec/webmin/changepass.pl /etc/webmin admin pwslab_admin
+        when: 
+            - os_check.stdout | regex_search("CentOS")
+
+    -   name: Append permissions - Ubuntu
+        shell: /usr/share/webmin/changepass.pl /etc/webmin admin pwslab_admin
+        when: 
+            - os_check.stdout | regex_search("Ubuntu")
+    
+    
